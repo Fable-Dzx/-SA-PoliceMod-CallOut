@@ -1,0 +1,110 @@
+// 功能：按 I 呼出菜单，上下方向键（或W/S）选择，空格键确认
+
+{$CLEO .cs}
+0000:
+
+// --- 变量定义 ---
+// 0@ = 菜单开关状态 (0=关闭, 1=开启)
+// 1@ = 当前选中的选项索引 (0, 1, 2)
+
+0@ = 0
+1@ = 0
+
+// --- 主循环 ---
+while true
+    wait 0  // 每帧循环，保证菜单刷新不闪烁
+
+    // =========================================
+    // 1. 检测 I 键 (虚拟键码 73) 开关菜单
+    // =========================================
+    if
+        0AB0:   key_pressed 73
+    then
+        if 0@ == 0
+        then
+            0@ = 1  // 打开菜单
+            1@ = 0  // 复位到第一项
+        else
+            0@ = 0  // 关闭菜单
+        end
+        wait 300  // 防止连按
+    end
+
+    // =========================================
+    // 2. 菜单处理逻辑 (仅当菜单开启时)
+    // =========================================
+    if 0@ == 1
+    then
+        // --- 2a. 上下导航 (方向键 或 WASD) ---
+        // 按 上 (38) 或 W (87)
+        if or
+            0AB0:   key_pressed 38
+            0AB0:   key_pressed 87
+        then
+            1@ -= 1
+            if 1@ < 0
+            then
+                1@ = 2  // 循环到最底部
+            end
+            wait 200  // 防抖
+        end
+
+        // 按 下 (40) 或 S (83)
+        if or
+            0AB0:   key_pressed 40
+            0AB0:   key_pressed 83
+        then
+            1@ += 1
+            if 1@ > 2
+            then
+                1@ = 0  // 循环到最顶部
+            end
+            wait 200
+        end
+
+        // --- 2b. 空格键 (32) 确认执行 ---
+        if
+            0AB0:   key_pressed 32
+        then
+            // 根据索引执行不同警情
+            if 1@ == 0
+            then
+                // 调用第一个警情脚本 (请将 "CALL_1" 改为你的任务脚本名)
+                0A94: start_custom_mission "CALL_1"
+                0@ = 0  // 执行后自动关闭菜单
+            end
+            if 1@ == 1
+            then
+                0A94: start_custom_mission "CALL_2"
+                0@ = 0
+            end
+            if 1@ == 2
+            then
+                0A94: start_custom_mission "CALL_3"
+                0@ = 0
+            end
+            wait 200
+        end
+
+        // --- 2c. 绘制屏幕菜单 (利用 wait 0 高频刷新，基本不闪) ---
+        // 先清空上一帧的文字
+        0AD1: show_formatted_text_highpriority " " time 0
+        
+        // 绘制标题
+        0AD1: show_formatted_text_highpriority "~y~=== 警情选择 ===~w~~n~~n~" time 0
+
+        // 绘制选项（带动态箭头 ~y~>）
+        if 1@ == 0
+        then
+            0AD1: show_formatted_text_highpriority "~y~> ~w~银行劫案~n~~w~街头斗殴~n~~w~车辆追捕" time 0
+        end
+        if 1@ == 1
+        then
+            0AD1: show_formatted_text_highpriority "~w~银行劫案~n~~y~> ~w~街头斗殴~n~~w~车辆追捕" time 0
+        end
+        if 1@ == 2
+        then
+            0AD1: show_formatted_text_highpriority "~w~银行劫案~n~~w~街头斗殴~n~~y~> ~w~车辆追捕" time 0
+        end
+    end
+end
